@@ -1068,7 +1068,7 @@
         const defaultSong = "song.mp3";
 
         // === DATE SETUP (5 Nov 2021) ===
-        const startDate = new Date(2021, 10, 5); 
+        const startDate = new Date(2025, 3, 8); 
 
         // Year 2026 ke liye Target Dates
         // SVGs for Icons
@@ -1224,7 +1224,7 @@
             const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
             const minutes = Math.floor((diff / (1000 * 60)) % 60);
             const seconds = Math.floor((diff / 1000) % 60);
-            document.getElementById("love-timer").innerHTML = `Together since 5 Nov 2021: ${days}d ${hours}h ${minutes}m ${seconds}s <svg viewBox="0 0 24 24" class="svg-icon"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+            document.getElementById("love-timer").innerHTML = `Together since 8 April 2025: ${days}d ${hours}h ${minutes}m ${seconds}s <svg viewBox="0 0 24 24" class="svg-icon"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
         }
         setInterval(updateTimer, 1000);
 
@@ -1803,13 +1803,8 @@
             });
         }
 
-        function getFixedPromiseCertificateDateText() {
-            return '08 April 2025';
-        }
-
-        function getFixedPromiseCertificateTimestamp() {
-            return new Date(2025, 3, 8, 12, 0, 0).getTime(); // 8 April 2025 (local noon)
-        }
+        const LEGACY_FIXED_PROMISE_CERT_DATE_TEXT = '08 April 2025';
+        const LEGACY_FIXED_PROMISE_CERT_TIMESTAMP = new Date(2025, 3, 8, 12, 0, 0).getTime(); // 8 April 2025 (local noon)
 
         function setPromiseCertificateStatus(message, isError = false) {
             const statusEl = document.getElementById('promise-certificate-status');
@@ -1896,7 +1891,23 @@
         function getStoredPromiseCertificate() {
             try {
                 const rawData = localStorage.getItem(PROMISE_CERTIFICATE_KEY);
-                return rawData ? JSON.parse(rawData) : null;
+                if (!rawData) return null;
+
+                const parsedData = JSON.parse(rawData);
+                if (!parsedData || typeof parsedData !== 'object') return null;
+
+                const hasLegacyDate =
+                    parsedData.dateText === LEGACY_FIXED_PROMISE_CERT_DATE_TEXT ||
+                    parsedData.createdAt === LEGACY_FIXED_PROMISE_CERT_TIMESTAMP;
+
+                if (hasLegacyDate) {
+                    const migratedAt = Date.now();
+                    parsedData.createdAt = migratedAt;
+                    parsedData.dateText = formatPromiseCertificateDate(migratedAt);
+                    localStorage.setItem(PROMISE_CERTIFICATE_KEY, JSON.stringify(parsedData));
+                }
+
+                return parsedData;
             } catch (error) {
                 console.error('Could not parse saved promise certificate:', error);
                 return null;
@@ -1930,7 +1941,7 @@
             );
             const partnerName = (data.partnerName || 'Partner Name').trim() || 'Partner Name';
             const promiseText = (data.promiseLine || '').trim() || 'I will always choose you, every single day.';
-            const dateText = getFixedPromiseCertificateDateText();
+            const dateText = data.dateText || formatPromiseCertificateDate(Date.now());
 
             coupleEl.innerText = `${yourName} ❤ ${partnerName}`;
             nameEl.innerText = partnerName;
@@ -2042,7 +2053,7 @@
                 customLineInput.dataset.userEdited = 'false';
             }
 
-            const createdAt = getFixedPromiseCertificateTimestamp();
+            const createdAt = Date.now();
             return {
                 yourName,
                 partnerName,
@@ -2050,7 +2061,7 @@
                 customLine,
                 promiseLine,
                 createdAt,
-                dateText: getFixedPromiseCertificateDateText(),
+                dateText: formatPromiseCertificateDate(createdAt),
                 signedBy: yourName
             };
         }
@@ -2156,6 +2167,7 @@
             );
             const partnerName = (data.partnerName || 'Partner Name').trim() || 'Partner Name';
             const promiseText = (data.promiseLine || '').trim() || 'I will always choose you, every single day.';
+            const dateText = data.dateText || formatPromiseCertificateDate(Date.now());
 
             const paperGradient = drawCtx.createLinearGradient(0, 0, 0, height);
             paperGradient.addColorStop(0, '#f9efd8');
@@ -2267,7 +2279,7 @@
             );
             const partnerName = (data.partnerName || 'Partner Name').trim() || 'Partner Name';
             const promiseText = (data.promiseLine || '').trim() || 'I will always choose you, every single day.';
-            const dateText = getFixedPromiseCertificateDateText();
+            const dateText = data.dateText || formatPromiseCertificateDate(Date.now());
 
             const w = canvas.width;
             const h = canvas.height;
@@ -2515,7 +2527,7 @@
             );
             const partnerName = (data.partnerName || 'my partner').trim() || 'my partner';
             const promiseText = (data.promiseLine || '').trim() || 'I will always choose you, every single day.';
-            const dateText = getFixedPromiseCertificateDateText();
+            const dateText = data.dateText || formatPromiseCertificateDate(Date.now());
             const fileName = `promise-certificate-${slugifyName(signerName)}-to-${slugifyName(partnerName)}.png`;
             const shareText = `${signerName} promises ${partnerName}: "${promiseText}" (${dateText}).`;
 
